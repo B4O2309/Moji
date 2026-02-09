@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Session from '../models/Session.js';
 
-const ACCESS_TOKEN_TTL = '30m'; // Normally, 15 minutes
+const ACCESS_TOKEN_TTL = '10s'; // Normally, 15 minutes
 // Day * Hour * Minute * Second * Millisecond
 const REFRESH_TOKEN_TTL = 14 * 24* 60 * 60 * 1000; // Normally, 7 days in seconds
 
@@ -83,7 +83,7 @@ export const signIn = async (req, res) => {
         // Respond with refreshToken in cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true, // Accessible only by web server
-            secure: process.env.NODE_ENV === 'production', // Set secure flag in production
+            secure: true, // Set secure flag in production
             sameSite: 'none', // backend, frontend on different domains
             maxAge: REFRESH_TOKEN_TTL,
         });
@@ -114,5 +114,41 @@ export const signOut = async (req, res) => {
     catch (error) {
         console.error('Error during sign out:', error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Refresh access token
+export const refreshToken = async (req, res) => {
+    try {
+        // Take refreshToken from cookie
+        const token = req.cookies?.refreshToken;
+        if (!token) {
+            return res.status(401).json({ message: 'Token không tồn tại' });
+        }
+
+        // Compare with refreshToken in db
+        const session = await Session.findOne({ refreshToken: token });
+        if (!session) {
+            return res.status(403).json({ message: 'Token không hợp lệ' });
+        }
+
+        // Check if expired
+        if (session.expiresAt < new Date()) {
+            return res.status(403).json({ message: 'Token đã hết hạn, vui lòng đăng nhập lại' });
+        }
+
+        // Create new accessToken
+        const accessToken = jwt.sign(
+            { userId: session.userId },
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: ACCESS_TOKEN_TTL }
+        );
+         
+        // return new accessToken
+        return res.status(200).json({ accessToken });
+    }
+    catch (error) {
+        console.error('Lỗi khi gọi refresh token:', error);
+        return res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };
