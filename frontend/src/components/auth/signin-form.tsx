@@ -42,15 +42,15 @@ export function SigninForm({className,
                 <a href="/"
                   className="mx-auto block w-fit text-center"
                 >
-                  <img
-                    src="/logo.svg"
-                    alt="Moji Logo"
+                  <img className ="h-25 w-auto"
+                    src="/logo.png"
+                    alt="Verdi Logo"
                   /> 
                 </a>
 
-                <h1 className="text-2xl font-bold">Chào mừng bạn trở lại</h1>
+                <h1 className="text-2xl font-bold">Welcome back</h1>
                 <p className="text-muted-foreground text-balance">
-                  Hãy đăng nhập để tiếp tục sử dụng Moji!
+                  Please sign in to continue using Verdi!
                 </p>
               </div>
 
@@ -59,12 +59,12 @@ export function SigninForm({className,
                 <Label 
                   htmlFor="username" 
                   className="block text-sm">
-                  Tên đăng nhập
+                  Username
                 </Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Moji"
+                  placeholder="Verdi"
                   {...register("username")}
                 />
                 {errors.username && (
@@ -74,12 +74,12 @@ export function SigninForm({className,
                 )}
               </div>
 
-              {/* Mật khẩu */}
+              {/* Password */}
               <div className="flex flex-col gap-3">
                 <Label 
                   htmlFor="password" 
                   className="block text-sm">
-                  Mật khẩu
+                  Password
                 </Label>
                 <Input
                   id="password"
@@ -93,25 +93,25 @@ export function SigninForm({className,
                 )}
               </div>
 
-              {/* Nút đăng nhập */}
+              {/* Sign In Button */}
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isSubmitting}>
-                Đăng nhập
+                Sign In
               </Button>
 
               <div className="text-center text-sm">
-                Chưa có tài khoản {` `}
+                Not a member? {` `}
                 <a href="/signup" className="text-primary underline underline-offset-4">
-                  Đăng ký
+                  Sign up
                 </a>
               </div>
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="/placeholder.png"
+              src="/placeHolderSignIn.png"
               alt="Image"
               className="absolute top-1/2 -translate-y-1/2 object-cover"
             />
@@ -119,8 +119,8 @@ export function SigninForm({className,
         </CardContent>
       </Card>
       <div className="px-6 text-center text-xs text-balance *:[a]:hover:text-primary *:[a]:underline *:[a]:underline-offset-4">
-        Bằng cách tiếp tục, bạn đồng ý với <a href="#">Điều khoản dịch vụ</a>{" "}
-        và <a href="#">Chính sách bảo mật</a> của chúng tôi.
+        By continuing, you agree to our <a href="#">Terms of Service</a>{" "}
+        and <a href="#">Privacy Policy</a>.
       </div>
     </div>
   )

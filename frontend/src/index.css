@@ -91,11 +91,8 @@
     );
 
     /* pattern craft */
-    --gradient-purple: radial-gradient(
-      125% 125% at 50% 10%,
-      hsla(0, 0%, 100%, 1) 40%,
-      hsla(262, 83%, 58%, 0.5) 100%
-    );
+    --gradient-purple: radial-gradient(circle 500px at 20% 80%, rgba(139,92,246,0.3), transparent),
+        radial-gradient(circle 500px at 80% 20%, rgba(59,130,246,0.3), transparent);
 
     /* Shadows */
     --shadow-soft: 0 8px 32px -8px hsl(271 79% 47% / 0.15);

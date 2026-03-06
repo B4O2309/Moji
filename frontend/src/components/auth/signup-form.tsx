@@ -10,11 +10,11 @@ import { useAuthStore } from "@/stores/useAuthStore"
 import { useNavigate } from "react-router"
 
 const signUpSchema = z.object({
-  firstname: z.string().min(1, "Tên bắt buộc phải có"),
-  lastname: z.string().min(1, "Họ bắt buộc phải có"),
-  username: z.string().min(3, "Tên đăng nhập phải có ít nhất 3 ký tự"),
-  email: z.email("Địa chỉ email không hợp lệ"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
+  username: z.string().min(3, "Username must be at least 3 characters long"),
+  email: z.email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -47,23 +47,23 @@ export function SignupForm({
                 <a href="/"
                   className="mx-auto block w-fit text-center"
                 >
-                  <img
-                    src="/logo.svg"
-                    alt="Moji Logo"
+                  <img className="h-25 w-auto"
+                    src="/logo.png"
+                    alt="Verdi Logo"
                   /> 
                 </a>
 
-                <h1 className="text-2xl font-bold">Tạo tài khoản Moji</h1>
+                <h1 className="text-2xl font-bold">Create your Verdi account</h1>
                 <p className="text-muted-foreground text-balance">
-                  Chào mừng bạn, hãy đăng ký để bắt đầu sử dụng Moji!
+                  Welcome! Please sign up to start using Verdi!
                 </p>
               </div>
 
-              {/* Họ & Tên */}
+              {/* Last Name & First Name */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="lastname" className="block text-sm">
-                    Họ
+                    Last Name
                   </Label>
                   <Input
                     id="lastname"
@@ -78,7 +78,7 @@ export function SignupForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="firstname" className="block text-sm">
-                    Tên
+                    First Name
                   </Label>
                   <Input
                     id="firstname"
@@ -98,12 +98,12 @@ export function SignupForm({
                 <Label 
                   htmlFor="username" 
                   className="block text-sm">
-                  Tên đăng nhập
+                  Username
                 </Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Moji"
+                  placeholder="Verdi"
                   {...register("username")}
                 />
                 {errors.username && (
@@ -123,7 +123,7 @@ export function SignupForm({
                 <Input
                   id="email"
                   type="text"
-                  placeholder="m@gmail.com"
+                  placeholder="v@gmail.com"
                   {...register("email")}
                 />
                 {errors.email && (
@@ -133,12 +133,12 @@ export function SignupForm({
                 )}
               </div>
 
-              {/* Mật khẩu */}
+              {/* Password */}
               <div className="flex flex-col gap-3">
                 <Label 
                   htmlFor="password" 
                   className="block text-sm">
-                  Mật khẩu
+                  Password
                 </Label>
                 <Input
                   id="password"
@@ -152,25 +152,25 @@ export function SignupForm({
                 )}
               </div>
 
-              {/* Nút đăng ký */}
+              {/* Sign Up Button */}
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isSubmitting}>
-                Tạo tài khoản
+                Create Account
               </Button>
 
               <div className="text-center text-sm">
-                Đã có tài khoản {` `}
+                Already have an account {` `}
                 <a href="/signin" className="text-primary underline underline-offset-4">
-                  Đăng nhập
+                  Sign in
                 </a>
               </div>
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="/placeholderSignUp.png"
+              src="/placeHolderSignUp_1.png"
               alt="Image"
               className="absolute top-1/2 -translate-y-1/2 object-cover"
             />
@@ -178,8 +178,8 @@ export function SignupForm({
         </CardContent>
       </Card>
       <div className="px-6 text-center text-xs text-balance *:[a]:hover:text-primary *:[a]:underline *:[a]:underline-offset-4">
-        Bằng cách tiếp tục, bạn đồng ý với <a href="#">Điều khoản dịch vụ</a>{" "}
-        và <a href="#">Chính sách bảo mật</a> của chúng tôi.
+        By continuing, you agree to our <a href="#">Terms of Service</a>{" "}
+        and <a href="#">Privacy Policy</a>.
       </div>
     </div>
   )
