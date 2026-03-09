@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const participantScema = new mongoose.Schema({
+const participantSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -46,7 +46,7 @@ const conversationSchema = new mongoose.Schema({
         required: true
     },
     participants: {
-        type: [participantScema],
+        type: [participantSchema],
         required: true,
     },
     group: {

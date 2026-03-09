@@ -22,7 +22,6 @@ import AddFriendModal from "../chat/AddFriendModal"
 import DirectMessageList from "../chat/DirectMessageList"
 import { useThemeStore } from "@/stores/useThemeStore"
 import { useAuthStore } from "@/stores/useAuthStore"
-import { data } from "react-router"
 import { NavUser } from "./nav-user"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
