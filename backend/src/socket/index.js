@@ -22,7 +22,7 @@ const onlineUsers = new Map();
 io.on("connection", async (socket) => {
     const user = socket.user;
     console.log(`${user.displayName} connected with socket ID: ${socket.id}`);
-    onlineUsers.set(user._id, socket.id);
+    onlineUsers.set(user._id.toString(), socket.id);
 
     io.emit("online-users", Array.from(onlineUsers.keys()));
 
@@ -32,7 +32,7 @@ io.on("connection", async (socket) => {
     });
     
     socket.on("disconnect", () => {
-        onlineUsers.delete(user._id);
+        onlineUsers.delete(user._id.toString());
         io.emit("online-users", Array.from(onlineUsers.keys()));
         console.log(`Socket disconnected: ${socket.id}`);
     });

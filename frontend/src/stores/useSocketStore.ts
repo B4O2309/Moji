@@ -3,6 +3,7 @@ import { io, type Socket} from 'socket.io-client';
 import {useAuthStore} from './useAuthStore';
 import type { SocketState } from '@/types/store';
 import { useChatStore } from './useChatStore';
+import { use } from 'react';
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
 
@@ -47,17 +48,30 @@ export const useSocketStore = create<SocketState>((set, get) => ({
                 }
             };
 
-            const updateConversation = {
+            const updatedConversation = {
                 ...conversation,
                 lastMessage,
                 unreadCounts
             }
 
-            if(useChatStore.getState().activeConversationId !== conversation._id) {
-                // Mark as read
-            }
+            useChatStore.getState().updateConversation(updatedConversation);
 
-            useChatStore.getState().updateConversation(updateConversation);
+            if (useChatStore.getState().activeConversationId === message.conversationId) {
+                useChatStore.getState().markAsSeen();
+    }
+        });
+
+        // Read Message
+        socket.on('read-message', ({conversation, lastMessage}) => {
+            const updated = {
+                _id: conversation._id,
+                lastMessage,
+                lastMessageAt: conversation.lastMessageAt,
+                unreadCounts: conversation.unreadCounts,
+                seenBy: conversation.seenBy,
+            };
+
+            useChatStore.getState().updateConversation(updated);
         });
     },
 

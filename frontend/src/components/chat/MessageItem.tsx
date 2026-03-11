@@ -13,21 +13,30 @@ interface MessageItemProps {
 }
 
 const MessageItem = ({message, index, messages, selectedConv, lastMessageStatus}: MessageItemProps) => {
-    const prev = messages[index-1];
+    const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
 
-    const isGroupBreak = index === 0 || 
-        message.senderId !== prev?.senderId ||
-        new Date(message.createdAt).getTime() - new Date(prev.createdAt || 0).getTime() > 300000; // 5 minutes
+    const isShowTime = index === 0 || 
+        new Date(message.createdAt).getTime() - new Date(prev?.createdAt || 0).getTime() > 300000; // 5 minutes 
+
+    const isGroupBreak = isShowTime || 
+        message.senderId !== prev?.senderId;
 
     const participant = selectedConv.participants.find((p: Participant) => p._id.toString() === message.senderId.toString());
 
     return (
-        <div
+        <>
+            {/* Time */}
+            {isShowTime && (
+                <span className="flex justify-center text-xs text-muted-foreground px-1">
+                    {formatMessageTime(new Date(message.createdAt))}
+                </span>
+            )}
+            <div
             className={cn(
                 "flex gap-2 message-bounce mt-1",
                 message.isOwn ? "justify-end" : "justify-start"
             )}
-        >
+            >
             {/* Avatar for group chats */}
             {!message.isOwn && (
                 <div className="w-8">
@@ -55,13 +64,6 @@ const MessageItem = ({message, index, messages, selectedConv, lastMessageStatus}
                     <p className="text-sm loading-relaxed break-words">{message.content}</p>
                 </Card>
 
-            {/* Time */}
-            {isGroupBreak && (
-                <span className="text-xs text-muted-foreground px-1">
-                    {formatMessageTime(new Date(message.createdAt))}
-                </span>
-            )}
-
             {/* Seen/ Delivered */}
             {message.isOwn && message._id === selectedConv.lastMessage?._id && (
                 <Badge
@@ -78,6 +80,7 @@ const MessageItem = ({message, index, messages, selectedConv, lastMessageStatus}
             )}
             </div>
         </div>
+        </>
     );
 }
 

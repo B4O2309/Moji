@@ -154,6 +154,38 @@ export const useChatStore = create<ChatState>()(
                     conversations: state.conversations.map((c) => 
                         c._id === conversation._id ? {...c, ...conversation} : c)
                 }))
+            },
+            
+            markAsSeen: async () => {
+                try {
+                    const {user} = useAuthStore.getState();
+                    const {activeConversationId, conversations} = get();
+
+                    if(!activeConversationId || !user) return;
+
+                    const conv = conversations.find((c) => c._id === activeConversationId);
+
+                    if (!conv) return;
+
+                    if ((conv.unreadCounts?.[user._id] ?? 0) === 0) return;
+
+                    await chatService.markAsSeen(activeConversationId);
+
+                    set((state) => ({
+                        conversations: state.conversations.map((c) => 
+                            c._id === activeConversationId && c.lastMessage ? {
+                                ...c,
+                                unreadCounts: {
+                                    ...c.unreadCounts,
+                                    [user._id]: 0
+                                }
+                            }
+                            : c)
+                    }));
+                }
+                catch (error) {
+                    console.error("Failed to mark as seen", error);
+                }
             }
         }),
         {

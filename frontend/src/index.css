@@ -234,6 +234,10 @@
     @apply bg-[hsl(var(--chat-bubble-received))] text-[hsl(var(--chat-bubble-received-foreground))] border border-border/50;
   }
 
+  .error-message {
+    @apply text-sm text-destructive
+  }
+
   /* Status indicators */
   .status-online {
     @apply bg-[hsl(var(--online))] shadow-[0_0_8px_hsl(var(--online)/0.5)];

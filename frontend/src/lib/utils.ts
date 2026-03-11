@@ -16,15 +16,15 @@ export const formatOnlineTime = (date: Date) => {
   const diffYears = Math.floor(diffDays / 365);
 
   if (diffMins < 60) {
-    return `${diffMins}m`; // 5m, 45m
+    return `${diffMins}m`;
   } else if (diffHours < 24) {
-    return `${diffHours}h`; // 3h, 20h
+    return `${diffHours}h`;
   } else if (diffDays < 30) {
-    return `${diffDays}d`; // 1d, 12d
+    return `${diffDays}d`;
   } else if (diffMonths < 12) {
-    return `${diffMonths}m`; // 1m, 2m, 11m
+    return `${diffMonths}mo`; // Using 'mo' to distinguish from 'm' (minutes)
   } else {
-    return `${diffYears}y`; // 1y, 2y
+    return `${diffYears}y`;
   }
 };
 
@@ -43,21 +43,21 @@ export const formatMessageTime = (date: Date) => {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear();
 
-  const timeStr = date.toLocaleTimeString("vi-VN", {
+  const timeStr = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 
   if (isToday) {
-    return timeStr; // ví dụ: "14:35"
+    return timeStr; // e.g., "14:35"
   } else if (isYesterday) {
-    return `Hôm qua ${timeStr}`; // ví dụ: "Hôm qua 23:10"
+    return `Yesterday ${timeStr}`; // e.g., "Yesterday 23:10"
   } else if (date.getFullYear() === now.getFullYear()) {
-    return `${date.getDate()}/${date.getMonth() + 1} ${timeStr}`; // ví dụ: "22/9 09:15"
+    return `${date.getDate()}/${date.getMonth() + 1} ${timeStr}`; // e.g., "22/9 09:15"
   } else {
     return `${date.getDate()}/${
       date.getMonth() + 1
-    }/${date.getFullYear()} ${timeStr}`; // ví dụ: "15/12/2023 18:40"
+    }/${date.getFullYear()} ${timeStr}`; // e.g., "15/12/2023 18:40"
   }
 };
