@@ -10,8 +10,8 @@ import { useAuthStore } from "@/stores/useAuthStore"
 import { useNavigate } from "react-router"
 
 const signInSchema = z.object({
-  username: z.string().min(3, "Tên đăng nhập phải có ít nhất 3 ký tự"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type SignInFormValues = z.infer<typeof signInSchema>;
