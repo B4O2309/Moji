@@ -21,6 +21,13 @@ export const signUp = async (req, res) => {
         if (duplicate) {
             return res.status(409).json({ message: 'Username already taken' });
         }
+        
+        // Check duplicate email
+        const duplicateEmail = await User.findOne({ email });
+        if (duplicateEmail) {
+            return res.status(409).json({ message: 'Email already in use' });
+        }
+
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10); // 10 salt rounds
 

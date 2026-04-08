@@ -3,6 +3,8 @@ import type { ChatState } from '@/types/store';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useAuthStore } from './useAuthStore';
+import { ca } from 'zod/v4/locales';
+import { useSocketStore } from './useSocketStore';
 
 export const useChatStore = create<ChatState>()(
     persist(
@@ -185,6 +187,33 @@ export const useChatStore = create<ChatState>()(
                 }
                 catch (error) {
                     console.error("Failed to mark as seen", error);
+                }
+            },
+
+            addConv: (conv) => {
+                if (!conv?._id) return;
+                set((state) => {
+                    const exists = state.conversations.some((c) => c._id.toString() === conv._id.toString());
+
+                    return {
+                        conversations: exists
+                        ? state.conversations
+                        : [conv, ...state.conversations],
+                        activeConversationId: conv._id
+                    }
+                });
+            },
+            
+            createConversation: async (type, name, memberIds) => {
+                try {
+                    const conversation = await chatService.createConversation(type, name, memberIds);
+
+                    get().addConv(conversation);
+
+                    useSocketStore.getState().socket?.emit('join-conversation', conversation._id);
+                }
+                catch (error) {
+                    console.error("Failed to create conversation", error);
                 }
             }
         }),

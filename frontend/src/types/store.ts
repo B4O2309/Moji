@@ -46,6 +46,8 @@ export interface ChatState {
     // Update Conversation
     updateConversation: (conversation: any) => void;
     markAsSeen: () => Promise<void>;
+    addConv: (conv: Conversation) => void;
+    createConversation: (type: 'direct' | 'group', name: string, memberIds: string[]) => Promise<void>;
 }
 
 export interface SocketState {
