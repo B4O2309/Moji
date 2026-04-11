@@ -1,11 +1,10 @@
-import {Server} from 'socket.io';
+import { Server } from 'socket.io';
 import http from 'http';
 import express from 'express';
 import { socketAuthMiddleware } from '../middlewares/socketMiddleware.js';
 import { getUserConversationsForSocketIO } from '../controllers/conversationController.js';
 
 const app = express();
-
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -18,28 +17,56 @@ const io = new Server(server, {
 io.use(socketAuthMiddleware);
 
 const onlineUsers = new Map();
+const hiddenUsers = new Set();
+
+const emitVisibleOnlineUsers = () => {
+    const visibleOnlineUsers = Array.from(onlineUsers.keys())
+        .filter((id) => !hiddenUsers.has(id));
+    io.emit("online-users", visibleOnlineUsers);
+};
 
 io.on("connection", async (socket) => {
     const user = socket.user;
+    const userId = user._id.toString();
     console.log(`${user.displayName} connected with socket ID: ${socket.id}`);
-    onlineUsers.set(user._id.toString(), socket.id);
 
-    io.emit("online-users", Array.from(onlineUsers.keys()));
+    onlineUsers.set(userId, socket.id);
+
+    if (user.showOnlineStatus === false) {
+        hiddenUsers.add(userId);
+    } else {
+        hiddenUsers.delete(userId);
+    }
+
+    const visibleOnlineUsers = Array.from(onlineUsers.keys())
+        .filter((id) => !hiddenUsers.has(id));
+    io.emit("online-users", visibleOnlineUsers);
 
     const conversationIds = await getUserConversationsForSocketIO(user._id);
-    conversationIds.forEach((id) => {
-        socket.join(id);
-    });
+    conversationIds.forEach((id) => socket.join(id));
 
     socket.on("join-conversation", (conversationId) => {
         socket.join(conversationId);
     });
 
-    socket.join(user._id.toString());
-    
+    socket.join(userId);
+
+    socket.on("update-online-status", (showOnlineStatus) => {
+        if (showOnlineStatus) {
+            hiddenUsers.delete(userId);
+        } else {
+            hiddenUsers.add(userId);
+        }
+        emitVisibleOnlineUsers();
+    });
+
     socket.on("disconnect", () => {
-        onlineUsers.delete(user._id.toString());
-        io.emit("online-users", Array.from(onlineUsers.keys()));
+        onlineUsers.delete(userId);
+        hiddenUsers.delete(userId);
+
+        const visibleOnlineUsers = Array.from(onlineUsers.keys())
+            .filter((id) => !hiddenUsers.has(id));
+        io.emit("online-users", visibleOnlineUsers);
         console.log(`Socket disconnected: ${socket.id}`);
     });
 });

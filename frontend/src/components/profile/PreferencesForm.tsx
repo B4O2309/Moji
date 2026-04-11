@@ -1,16 +1,29 @@
 import { Moon, Sun } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { useState } from "react";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import { toast } from "sonner";
+import { authService } from "@/services/authService";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useSocketStore } from "@/stores/useSocketStore";
 
 
 const PreferencesForm = () => {
     const { isDark, toggleTheme } = useThemeStore();
+    const { user, setUser } = useAuthStore();
+    const { socket } = useSocketStore();
 
-    const [onlineStatus, setOnlineStatus] = useState(true);
-
+    const handleToggleOnlineStatus = async (value: boolean) => {
+        try {
+            const updatedUser = await authService.updateOnlineStatus(value);
+            setUser(updatedUser);
+            socket?.emit("update-online-status", value);
+        } catch {
+            toast.error("Failed to update online status.");
+        }
+    };
+    
     return (
         <Card className="glass-strong border-border/30">
             <CardHeader>
@@ -61,8 +74,8 @@ const PreferencesForm = () => {
                     </div>
                     <Switch
                         id="online-status"
-                        checked={onlineStatus}
-                        onCheckedChange={setOnlineStatus}
+                        checked={user?.showOnlineStatus ?? true}
+                        onCheckedChange={handleToggleOnlineStatus}
                         className="data-[state=checked]:bg-primary-glow"
                     />
                 </div>

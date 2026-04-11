@@ -1,5 +1,6 @@
 import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
 
 export const authMe = async (req, res) => {
     try {
@@ -90,6 +91,60 @@ export const updateProfile = async (req, res) => {
     }
     catch (error) {
         console.error('Error during update profile:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const updateOnlineStatus = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { showOnlineStatus } = req.body;
+
+        if (typeof showOnlineStatus !== 'boolean') {
+            return res.status(400).json({ message: 'showOnlineStatus must be a boolean' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { showOnlineStatus },
+            { new: true }
+        ).select("-hashedPassword");
+
+        return res.status(200).json({ user: updatedUser });
+    }
+    catch (error) {
+        console.error('Error during update online status:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { oldPassword, newPassword } = req.body;
+
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ message: 'Old and new password are required' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters' });
+        }
+
+        const user = await User.findById(userId);
+        const isMatch = await bcrypt.compare(oldPassword, user.hashedPassword);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Old password is incorrect' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await User.findByIdAndUpdate(userId, { hashedPassword });
+
+        return res.status(200).json({ message: 'Password changed successfully' });
+    }
+    catch (error) {
+        console.error('Error during change password:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

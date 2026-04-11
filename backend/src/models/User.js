@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         sparse: true // Allows multiple null values
     },
+    showOnlineStatus: {
+        type: Boolean,
+        default: true
+    },
 },
 {
     timestamps: true

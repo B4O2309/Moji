@@ -38,4 +38,14 @@ export const authService = {
         const response = await api.put('/users/me', data, { withCredentials: true });
         return response.data.user;
     },
+
+    updateOnlineStatus: async (showOnlineStatus: boolean) => {
+        const response = await api.put('/users/me/online-status', { showOnlineStatus }, { withCredentials: true });
+        return response.data.user;
+    },
+
+    changePassword: async (oldPassword: string, newPassword: string) => {
+        const response = await api.put('/users/me/change-password', { oldPassword, newPassword }, { withCredentials: true });
+        return response.data;
+    },
 }
