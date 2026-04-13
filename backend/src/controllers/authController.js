@@ -5,6 +5,12 @@ import crypto from 'crypto';
 import Session from '../models/Session.js';
 import OTP from '../models/OTP.js';
 import nodemailer from 'nodemailer';
+import Conversation from '../models/Conversation.js';
+import FriendRequest from '../models/FriendRequest.js';
+import Friend from '../models/Friend.js';
+import Block from '../models/Block.js';
+import { io } from '../socket/index.js';
+import {UAParser} from 'ua-parser-js';
 
 const createTransporter = () => {
     return nodemailer.createTransport({
@@ -90,13 +96,17 @@ export const signIn = async (req, res) => {
 
         // Create refreshToken with JWT
         const refreshToken = crypto.randomBytes(64).toString('hex');
-        
+        const { device, browser, ip } = parseDeviceInfo(req);
 
         // Create new session to store refreshToken
         await Session.create({
             userId: user._id,
             refreshToken,
-            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL)
+            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
+            device,
+            browser,
+            ip,
+            lastActive: new Date()
         });
 
         // Respond with refreshToken in cookie
@@ -301,11 +311,16 @@ export const googleCallback = async (req, res) => {
         );
 
         const refreshToken = crypto.randomBytes(64).toString('hex');
+        const { device, browser, ip } = parseDeviceInfo(req);
 
         await Session.create({
             userId: freshUser._id,
             refreshToken,
-            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL)
+            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
+            device,
+            browser,
+            ip,
+            lastActive: new Date()
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -320,5 +335,133 @@ export const googleCallback = async (req, res) => {
     catch (error) {
         console.error('Error during Google callback:', error);
         return res.redirect(`${process.env.CLIENT_URL}/signin?error=google_auth_failed`);
+    }
+};
+
+export const deleteAccount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const userIdStr = userId.toString();
+
+        // Fetch all friends to emit socket events before deletion
+        const friendships = await Friend.find({
+            $or: [{ userA: userId }, { userB: userId }]
+        }).lean();
+
+        const friendIds = friendships.map(f =>
+            f.userA.toString() === userIdStr ? f.userB.toString() : f.userA.toString()
+        );
+
+        // Get all conversation IDs the user is part of to emit in socket event
+        const conversations = await Conversation.find({
+            "participants.userId": userId
+        }, { _id: 1 }).lean();
+
+        const conversationIds = conversations.map(c => c._id.toString());
+
+        // Emit socket event to friends before deleting the user and all related data
+        friendIds.forEach(friendId => {
+            io.to(friendId).emit('user-deleted', {
+                deletedUserId: userIdStr,
+                conversationIds
+            });
+        });
+
+        // Delete user and all related data in parallel
+        await Promise.all([
+            User.findByIdAndDelete(userId),
+            Session.deleteMany({ userId }),
+            OTP.deleteMany({ email: req.user.email }),
+            Friend.deleteMany({ $or: [{ userA: userId }, { userB: userId }] }),
+            Block.deleteMany({ $or: [{ blocker: userId }, { blocked: userId }] }),
+            FriendRequest.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
+        ]);
+
+        res.clearCookie('refreshToken');
+
+        return res.status(200).json({ message: 'Account deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error during account deletion:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const parseDeviceInfo = (req) => {
+    const parser = new UAParser(req.headers['user-agent']);
+    const result = parser.getResult();
+    return {
+        device: result.device.type
+            ? `${result.device.vendor ?? ''} ${result.device.model ?? ''}`.trim() || 'Mobile'
+            : 'Desktop',
+        browser: result.browser.name
+            ? `${result.browser.name} ${result.browser.version?.split('.')[0] ?? ''}`
+            : 'Unknown Browser',
+        ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'Unknown'
+    };
+};
+
+export const getSessions = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const currentToken = req.cookies?.refreshToken;
+
+        const sessions = await Session.find({ userId })
+            .sort({ lastActive: -1 })
+            .lean();
+
+        const formatted = sessions.map(s => ({
+            _id: s._id,
+            device: s.device,
+            browser: s.browser,
+            ip: s.ip,
+            lastActive: s.lastActive,
+            createdAt: s.createdAt,
+            isCurrent: s.refreshToken === currentToken
+        }));
+
+        return res.status(200).json({ sessions: formatted });
+    }
+    catch (error) {
+        console.error('Error fetching sessions:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Revoke 1 session
+export const revokeSession = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { sessionId } = req.params;
+
+        const session = await Session.findOne({ _id: sessionId, userId });
+        if (!session) return res.status(404).json({ message: 'Session not found' });
+
+        await Session.findByIdAndDelete(sessionId);
+
+        return res.status(200).json({ message: 'Session revoked' });
+    }
+    catch (error) {
+        console.error('Error revoking session:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Revoke all sessions except the current one
+export const revokeAllSessions = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const currentToken = req.cookies?.refreshToken;
+
+        await Session.deleteMany({
+            userId,
+            refreshToken: { $ne: currentToken }
+        });
+
+        return res.status(200).json({ message: 'All other sessions revoked' });
+    }
+    catch (error) {
+        console.error('Error revoking all sessions:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };

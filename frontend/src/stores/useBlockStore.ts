@@ -24,6 +24,8 @@ export const useBlockStore = create<BlockState>((set, get) => ({
         try {
             set({ loading: true });
             await api.post(`/blocks/${userId}`, {}, { withCredentials: true });
+            const res = await api.get("/blocks", { withCredentials: true });
+            set({ blockedUsers: res.data.blockedUsers });
             toast.success("User blocked.");
         } catch (error) {
             console.error("Error blocking user:", error);
@@ -37,6 +39,8 @@ export const useBlockStore = create<BlockState>((set, get) => ({
         try {
             set({ loading: true });
             await api.delete(`/blocks/${userId}`, { withCredentials: true });
+            const res = await api.get("/blocks", { withCredentials: true });
+            set({ blockedUsers: res.data.blockedUsers });
             toast.success("User unblocked.");
         } catch (error) {
             console.error("Error unblocking user:", error);

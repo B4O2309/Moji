@@ -414,3 +414,53 @@ export const leaveGroup = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const getArchivedConversations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const conversations = await Conversation.find({
+            "participants.userId": userId,
+            hiddenBy: userId,
+            "deletedBy.userId": { $ne: userId }
+        })
+        .sort({ lastMessageAt: -1 })
+        .populate({ path: 'participants.userId', select: 'displayName avatarUrl username' })
+        .populate({ path: 'lastMessage.senderId', select: 'displayName avatarUrl' })
+        .populate({ path: 'seenBy', select: 'displayName avatarUrl' });
+
+        const formatted = conversations.map((conv) => {
+            const participants = (conv.participants || []).map((p) => ({
+                _id: p.userId?._id,
+                displayName: p.userId?.displayName,
+                avatarUrl: p.userId?.avatarUrl ?? null,
+                username: p.userId?.username,
+                joinedAt: p.joinedAt
+            }));
+            return { ...conv.toObject(), unreadCount: conv.unreadCount || {}, participants };
+        });
+
+        return res.status(200).json({ conversations: formatted });
+    }
+    catch (error) {
+        console.error('Error fetching archived conversations:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const unarchiveConversation = async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const userId = req.user._id;
+
+        await Conversation.findByIdAndUpdate(conversationId, {
+            $pull: { hiddenBy: userId }
+        });
+
+        return res.status(200).json({ message: 'Conversation unarchived' });
+    }
+    catch (error) {
+        console.error('Error unarchiving conversation:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};

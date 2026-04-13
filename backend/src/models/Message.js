@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+const reactionSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    emoji: {
+        type: String,
+        required: true
+    }
+}, { _id: false });
+
 const messageSchema = new mongoose.Schema({
     conversationId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -19,10 +31,14 @@ const messageSchema = new mongoose.Schema({
     imgUrl: {
         type: String,
     },
+    reactions: {
+        type: [reactionSchema],
+        default: []
+    }
 },
-{
-    timestamps: true
-});
+    {
+        timestamps: true
+    });
 
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 

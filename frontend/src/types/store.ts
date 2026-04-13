@@ -1,5 +1,5 @@
 import type { Friend, FriendRequest, User } from './user';
-import type { Conversation, Message } from './chat';
+import type { Conversation, Message, Reaction } from './chat';
 import type { Socket } from 'node_modules/socket.io-client/build/esm/socket';
 
 export interface AuthState {
@@ -53,8 +53,13 @@ export interface ChatState {
     createConversation: (type: 'direct' | 'group', name: string, memberIds: string[]) => Promise<void>;
     hideConversation: (conversationId: string) => Promise<void>;
     deleteConversation: (conversationId: string) => Promise<void>;
+
     renameGroup: (conversationId: string, name: string) => Promise<void>;
     leaveGroup: (conversationId: string) => Promise<void>;
+    removeConversations: (conversationIds: string[]) => void;
+
+    updateMessageReactions: (messageId: string, reactions: Reaction[]) => void;
+
 }
 
 export interface SocketState {
@@ -75,6 +80,7 @@ export interface FriendState {
     acceptRequest: (requestId: string) => Promise<void>;
     declineRequest: (requestId: string) => Promise<void>;
     getFriends: () => Promise<void>;
+    unfriend: (friendId: string) => Promise<void>;
 }
 
 export interface UserState {

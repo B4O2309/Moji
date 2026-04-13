@@ -1,6 +1,7 @@
 import { friendService } from "@/services/friendService";
 import type { FriendState } from "@/types/store";
 import type { FriendRequest } from "@/types/user";
+import { toast } from "sonner";
 import { create } from "zustand";
 
 export const useFriendStore = create<FriendState>((set, get) => ({
@@ -115,5 +116,16 @@ export const useFriendStore = create<FriendState>((set, get) => ({
             if (exists) return state;
             return { receivedList: [request, ...state.receivedList] };
         });
+    },
+    unfriend: async (friendId: string) => {
+        try {
+            set({ loading: true });
+            await friendService.unfriend(friendId);
+        } catch (error) {
+            console.error("Error removing friend:", error);
+            toast.error("Failed to remove friend.");
+        } finally {
+            set({ loading: false });
+        }
     },
 }));

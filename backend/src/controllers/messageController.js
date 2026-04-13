@@ -31,7 +31,7 @@ export const sendDirectMessage = async (req, res) => {
         if (!content && !imgUrl) {
             return res.status(400).json({ message: 'Message content or image is required' });
         }
-        
+
         const [iBlocked, theyBlocked] = await Promise.all([
             Block.exists({ blocker: senderId, blocked: recipientId }),
             Block.exists({ blocker: recipientId, blocked: senderId })
@@ -138,6 +138,55 @@ export const sendGroupMessage = async (req, res) => {
     }
     catch (error) {
         console.error('Error sending group message:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const toggleReaction = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { emoji } = req.body;
+        const userId = req.user._id;
+
+        if (!emoji) return res.status(400).json({ message: 'Emoji is required' });
+
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+
+        if (message.senderId.toString() === userId.toString()) {
+            return res.status(403).json({ message: 'You cannot react to your own message' });
+        }
+
+        const existingIdx = message.reactions.findIndex(
+            r => r.userId.toString() === userId.toString() && r.emoji === emoji
+        );
+
+        if (existingIdx > -1) {
+            // Check if user has already reacted with the same emoji → remove reaction
+            message.reactions.splice(existingIdx, 1);
+        } else {
+            // Check if user has reacted with a different emoji → update to new emoji
+            const otherEmojiIdx = message.reactions.findIndex(
+                r => r.userId.toString() === userId.toString()
+            );
+            if (otherEmojiIdx > -1) {
+                message.reactions.splice(otherEmojiIdx, 1);
+            }
+            message.reactions.push({ userId, emoji });
+        }
+
+        await message.save();
+
+        // Emit socket to sync realtime
+        io.to(message.conversationId.toString()).emit('message-reaction', {
+            messageId: message._id,
+            reactions: message.reactions
+        });
+
+        return res.status(200).json({ reactions: message.reactions });
+    }
+    catch (error) {
+        console.error('Error toggling reaction:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

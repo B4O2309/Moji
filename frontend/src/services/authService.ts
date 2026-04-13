@@ -8,7 +8,7 @@ export const authService = {
             firstName: firstname,
             lastName: lastname,
             email,
-        }, {withCredentials: true});
+        }, { withCredentials: true });
         return response.data;
     },
 
@@ -16,21 +16,21 @@ export const authService = {
         const response = await api.post('/auth/signin', {
             username,
             password,
-        }, {withCredentials: true});
+        }, { withCredentials: true });
         return response.data;
     },
 
     signOut: async () => {
-        return api.post('/auth/signout', {}, {withCredentials: true});
+        return api.post('/auth/signout', {}, { withCredentials: true });
     },
 
     fetchMe: async () => {
-        const response = await api.get('/users/me', {withCredentials: true});
+        const response = await api.get('/users/me', { withCredentials: true });
         return response.data.user;
     },
 
     refresh: async () => {
-        const response = await api.post('/auth/refresh', {}, {withCredentials: true});
+        const response = await api.post('/auth/refresh', {}, { withCredentials: true });
         return response.data.accessToken;
     },
 
@@ -63,9 +63,29 @@ export const authService = {
         const response = await api.post('/auth/reset-password', { email, otp, newPassword }, { withCredentials: true });
         return response.data;
     },
-    
+
     getUserById: async (id: string) => {
         const response = await api.get(`/users/${id}`, { withCredentials: true });
         return response.data.user;
+    },
+
+    deleteAccount: async () => {
+        const res = await api.delete('/auth/delete-account', { withCredentials: true });
+        return res.data;
+    },
+    
+    getSessions: async () => {
+        const res = await api.get('/auth/sessions', { withCredentials: true });
+        return res.data.sessions;
+    },
+
+    revokeSession: async (sessionId: string) => {
+        const res = await api.delete(`/auth/sessions/${sessionId}`, { withCredentials: true });
+        return res.data;
+    },
+
+    revokeAllSessions: async () => {
+        const res = await api.delete('/auth/sessions', { withCredentials: true });
+        return res.data;
     },
 }

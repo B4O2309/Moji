@@ -8,51 +8,55 @@ import { useEffect } from 'react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useSocketStore } from './stores/useSocketStore';
 import GoogleCallbackPage from './pages/GoogleCallbackPage';
+import { useFriendStore } from './stores/useFriendStore';
 
 function App() {
-  const {accessToken} = useAuthStore();
-  const {connectSocket, disconnectSocket} = useSocketStore();
+  const { accessToken } = useAuthStore();
+  const { connectSocket, disconnectSocket } = useSocketStore();
+  const { getAllFriendRequests, getFriends } = useFriendStore();
 
   useEffect(() => {
     if (accessToken) {
       connectSocket();
+      getAllFriendRequests();
+      getFriends();
     }
 
     return () => disconnectSocket();
   }, [accessToken]);
 
   return (
-  <>
-    <Toaster richColors />
-    <BrowserRouter>
-      <Routes>
+    <>
+      <Toaster richColors />
+      <BrowserRouter>
+        <Routes>
 
-        {/* public routes */}
-        <Route
-          path="/signin"
-          element={<SignInPage/>}
-        />
-
-        <Route
-          path="/signup"
-          element={<SignUpPage/>}
-        />
-
-        <Route 
-          path="/auth/google/callback" 
-          element={<GoogleCallbackPage />} 
-        />
-
-        {/* protected routes */}
-        <Route element={<ProtectedRoute />}>
+          {/* public routes */}
           <Route
-            path="/"
-            element={<ChatAppPage/>}
+            path="/signin"
+            element={<SignInPage />}
           />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  </>
+
+          <Route
+            path="/signup"
+            element={<SignUpPage />}
+          />
+
+          <Route
+            path="/auth/google/callback"
+            element={<GoogleCallbackPage />}
+          />
+
+          {/* protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/"
+              element={<ChatAppPage />}
+            />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </>
   );
 }
 

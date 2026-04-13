@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "../ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
 import { useEffect, useState } from "react"
 import { authService } from "@/services/authService"
 import UserAvatar from "../chat/UserAvatar"
@@ -10,6 +10,7 @@ import AddFriendModal from "../chat/AddFriendModal"
 import StatusBadge from "../chat/StatusBadge"
 import { useBlockStore } from "@/stores/useBlockStore";
 import { cn } from "@/lib/utils"
+import { Button } from "../ui/button"
 
 interface UserProfileDialogProps {
     userId: string | null;
@@ -32,6 +33,8 @@ const UserProfileDialog = ({ userId, onClose }: UserProfileDialogProps) => {
     const { user } = useAuthStore();
     const { friends, getFriends } = useFriendStore();
     const { isBlocked, blockUser, unblockUser, loading: blockLoading } = useBlockStore();
+    const [openUnfriend, setOpenUnfriend] = useState(false);
+    const [openConfirmBlock, setOpenConfirmBlock] = useState(false);
 
     const [blockStatus, setBlockStatus] = useState({ iBlockedThem: false, theyBlockedMe: false });
 
@@ -85,50 +88,60 @@ const UserProfileDialog = ({ userId, onClose }: UserProfileDialogProps) => {
                                     </div>
 
                                     {/* Friend status button */}
-                                    {!isMe && (
-                                        isFriend ? (
-                                            // If already friend → show "Friends" with check icon, no click action
-                                            <div className="flex items-center gap-1.5 text-xs font-medium
-                                                text-emerald-600 border border-emerald-300 rounded-full px-3 py-1.5 mb-1">
-                                                <UserCheck className="size-3.5" />
-                                                Friends
-                                            </div>
-                                        ) : profileUser.username ? (
-                                            // If not friend but has username → show button Add Friend
+                                    {isFriend ? (
+                                        <>
                                             <button
                                                 type="button"
-                                                onClick={() => setOpenAddFriend(true)}
+                                                onClick={() => setOpenUnfriend(true)}
                                                 className="flex items-center gap-1.5 text-xs font-medium
-                                                text-primary hover:opacity-80 transition mb-1
-                                                border border-primary/30 rounded-full px-3 py-1.5"
+                                                text-emerald-600 border border-emerald-300 rounded-full px-3 py-1.5 mb-1
+                                                hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40
+                                                transition-all duration-200"
                                             >
-                                                <UserPlus className="size-3.5" />
-                                                Add Friend
+                                                <UserCheck className="size-3.5" />
+                                                Friends
                                             </button>
-                                        ) : null
-                                    )}
-                                    {!isMe && (
+                                        </>
+                                    ) : profileUser?.username ? (
                                         <button
                                             type="button"
-                                            onClick={async () => {
-                                                if (blockStatus.iBlockedThem) {
-                                                    await unblockUser(profileUser!._id);
-                                                    setBlockStatus(prev => ({ ...prev, iBlockedThem: false }));
-                                                } else {
-                                                    await blockUser(profileUser!._id);
-                                                    setBlockStatus(prev => ({ ...prev, iBlockedThem: true }));
-                                                }
-                                            }}
-                                            className={cn(
-                                                "flex items-center gap-1.5 text-xs font-medium transition-all duration-200 mb-1 rounded-full px-3 py-1.5 border",
-                                                blockStatus.iBlockedThem
-                                                    ? "bg-destructive/10 text-destructive border-destructive/40 hover:bg-destructive hover:text-white"
-                                                    : "bg-transparent text-muted-foreground border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
-                                            )}
+                                            onClick={() => setOpenAddFriend(true)}
+                                            className="flex items-center gap-1.5 text-xs font-medium
+                                            text-primary hover:opacity-80 transition mb-1
+                                            border border-primary/30 rounded-full px-3 py-1.5"
                                         >
-                                            <Ban className="size-3.5" />
-                                            {blockStatus.iBlockedThem ? "Unblock" : "Block"}
+                                            <UserPlus className="size-3.5" />
+                                            Add Friend
                                         </button>
+                                    ) : null}
+                                    {!isMe && (
+                                        <>
+                                            {/* Block/Unblock với confirm */}
+                                            {blockStatus.iBlockedThem ? (
+                                                // Unblock không cần confirm
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        await unblockUser(profileUser!._id);
+                                                        setBlockStatus(prev => ({ ...prev, iBlockedThem: false }));
+                                                    }}
+                                                    className="flex items-center gap-1.5 text-xs font-medium transition-all duration-200 mb-1 rounded-full px-3 py-1.5 border bg-destructive/10 text-destructive border-destructive/40 hover:bg-destructive hover:text-white"
+                                                >
+                                                    <Ban className="size-3.5" />
+                                                    Unblock
+                                                </button>
+                                            ) : (
+                                                // Block cần confirm
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenConfirmBlock(true)}
+                                                    className="flex items-center gap-1.5 text-xs font-medium transition-all duration-200 mb-1 rounded-full px-3 py-1.5 border bg-transparent text-muted-foreground border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
+                                                >
+                                                    <Ban className="size-3.5" />
+                                                    Block
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 
@@ -167,6 +180,70 @@ const UserProfileDialog = ({ userId, onClose }: UserProfileDialogProps) => {
                     showTrigger={false}
                 />
             )}
+            {/* Confirm unfriend dialog */}
+            <Dialog open={openUnfriend} onOpenChange={setOpenUnfriend}>
+                <DialogContent className="sm:max-w-[320px] border-none">
+                    <DialogHeader>
+                        <DialogTitle>Remove Friend?</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                        Are you sure you want to unfriend{" "}
+                        <span className="font-medium text-foreground">
+                            {profileUser?.displayName}
+                        </span>
+                        ? You can always send a friend request again later.
+                    </p>
+                    <div className="flex gap-2 justify-end mt-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOpenUnfriend(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={async () => {
+                                await useFriendStore.getState().unfriend(profileUser!._id);
+                                setOpenUnfriend(false);
+                            }}
+                        >
+                            Remove Friend
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Confirm block dialog */}
+            <Dialog open={openConfirmBlock} onOpenChange={setOpenConfirmBlock}>
+                <DialogContent className="sm:max-w-[320px] border-none">
+                    <DialogHeader>
+                        <DialogTitle>Block User?</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                        Are you sure you want to block{" "}
+                        <span className="font-medium text-foreground">{profileUser?.displayName}</span>?
+                        They won't be able to send you messages.
+                    </p>
+                    <div className="flex gap-2 justify-end mt-2">
+                        <Button variant="outline" size="sm" onClick={() => setOpenConfirmBlock(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={async () => {
+                                await blockUser(profileUser!._id);
+                                setBlockStatus(prev => ({ ...prev, iBlockedThem: true }));
+                                setOpenConfirmBlock(false);
+                            }}
+                        >
+                            Block
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

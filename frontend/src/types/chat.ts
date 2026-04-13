@@ -46,13 +46,19 @@ export interface ConversationResponse {
   conversations: Conversation[];
 }
 
+export interface Reaction {
+    userId: string;
+    emoji: string;
+}
+
 export interface Message {
-  _id: string;
-  conversationId: string;
-  senderId: string;
-  content: string | null;
-  imgUrl?: string | null;
-  updatedAt?: string | null;
-  createdAt: string;
-  isOwn?: boolean;
+    _id: string;
+    conversationId: string;
+    senderId: string;
+    content: string | null;
+    imgUrl?: string | null;
+    reactions?: Reaction[];
+    updatedAt?: string | null;
+    createdAt: string;
+    isOwn?: boolean;
 }
