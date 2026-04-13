@@ -36,13 +36,15 @@ export interface ChatState {
     convloading: boolean;
     messageLoading: boolean;
     loading: boolean;
+    replyingTo: Message | null;
+    setReplyingTo: (message: Message | null) => void;
     reset: () => void;
 
     setActiveConversation: (id: string | null) => void;
     fetchConversations: () => Promise<void>;
     fetchMessages: (conversationId?: string) => Promise<void>;
-    sendDirectMessage: (recipientId: string, content: string, imgUrl?: string) => Promise<void>;
-    sendGroupMessage: (conversationId: string, content: string, imgUrl?: string) => Promise<void>;
+    sendDirectMessage: (recipientId: string, content?: string, imgUrl?: string, replyToId?: string) => Promise<void>;
+    sendGroupMessage: (conversationId: string, content?: string, imgUrl?: string, replyToId?: string) => Promise<void>;
     // Add Message
     addMessage: (message: Message) => Promise<void>;
 
@@ -60,6 +62,8 @@ export interface ChatState {
 
     updateMessageReactions: (messageId: string, reactions: Reaction[]) => void;
 
+    updateMessageContent: (messageId: string, content: null, imgUrl: null) => void;
+    deleteMessageLocally: (messageId: string) => void;
 }
 
 export interface SocketState {

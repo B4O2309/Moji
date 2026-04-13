@@ -25,7 +25,7 @@ export const uploadMessageImage = async (req, res) => {
 
 export const sendDirectMessage = async (req, res) => {
     try {
-        const { recipientId, content, conversationId, imgUrl } = req.body;
+        const { recipientId, content, conversationId, imgUrl, replyTo } = req.body;
         const senderId = req.user.id;
 
         if (!content && !imgUrl) {
@@ -67,8 +67,16 @@ export const sendDirectMessage = async (req, res) => {
             conversationId: conversation._id,
             senderId,
             content: content || null,
-            imgUrl: imgUrl || null
+            imgUrl: imgUrl || null,
+            replyTo: replyTo || null
         });
+
+        if (message.replyTo) {
+            await message.populate({
+                path: 'replyTo',
+                select: 'content imgUrl senderId'
+            });
+        }
 
         const participantIds = conversation.participants.map(p => p.userId);
         await Conversation.findByIdAndUpdate(conversation._id, {
@@ -110,7 +118,7 @@ export const sendDirectMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
     try {
-        const { conversationId, content, imgUrl } = req.body;
+        const { conversationId, content, imgUrl, replyTo } = req.body;
         const senderId = req.user.id;
         const conversation = req.conversation;
 
@@ -122,8 +130,20 @@ export const sendGroupMessage = async (req, res) => {
             conversationId,
             senderId,
             content: content || null,
-            imgUrl: imgUrl || null
+            imgUrl: imgUrl || null,
+            replyTo: replyTo || null
         });
+
+        if (message.replyTo) {
+             await message.populate({
+                path: 'replyTo',
+                select: 'content imgUrl senderId',
+                populate: {
+                    path: 'senderId',
+                    select: 'displayName'
+                }
+             });
+        }
 
         const participantIds = conversation.participants.map(p => p.userId);
         await Conversation.findByIdAndUpdate(conversationId, {
@@ -187,6 +207,49 @@ export const toggleReaction = async (req, res) => {
     }
     catch (error) {
         console.error('Error toggling reaction:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { deleteForEveryone } = req.body;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+
+        if (deleteForEveryone) {
+            // Only sender can delete for everyone
+            if (message.senderId.toString() !== userId.toString()) {
+                return res.status(403).json({ message: 'You can only unsend your own messages' });
+            }
+
+            message.deletedForEveryone = true;
+            message.content = null;
+            message.imgUrl = null;
+            await message.save();
+
+            // Notify all participants in the conversation
+            io.to(message.conversationId.toString()).emit('message-deleted', {
+                messageId: message._id,
+                conversationId: message.conversationId,
+                deletedForEveryone: true
+            });
+        } else {
+            // Only mark as deleted for the user (soft delete)
+            await Message.findByIdAndUpdate(messageId, {
+                $addToSet: { deletedBy: userId }
+            });
+
+            // No need to emit socket because it only affects the user themselves
+        }
+
+        return res.status(200).json({ message: 'Message deleted' });
+    }
+    catch (error) {
+        console.error('Error deleting message:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

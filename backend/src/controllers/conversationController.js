@@ -89,10 +89,10 @@ export const getConversations = async (req, res) => {
             "participants.userId": userId,
             hiddenBy: { $ne: userId }, // Only filter hidden conversations
         })
-        .sort({ lastMessageAt: -1, updatedAt: -1 })
-        .populate({ path: 'participants.userId', select: 'displayName avatarUrl username' })
-        .populate({ path: 'lastMessage.senderId', select: 'displayName avatarUrl' })
-        .populate({ path: 'seenBy', select: 'displayName avatarUrl' });
+            .sort({ lastMessageAt: -1, updatedAt: -1 })
+            .populate({ path: 'participants.userId', select: 'displayName avatarUrl username' })
+            .populate({ path: 'lastMessage.senderId', select: 'displayName avatarUrl' })
+            .populate({ path: 'seenBy', select: 'displayName avatarUrl' });
 
         const formatted = conversations.map((conv) => {
             const participants = (conv.participants || []).map((p) => ({
@@ -138,7 +138,19 @@ export const getMessages = async (req, res) => {
 
         let messages = await Message.find(query)
             .sort({ createdAt: -1 })
-            .limit(Number(limit) + 1);
+            .limit(Number(limit) + 1)
+            .populate({
+                path: 'replyTo',
+                select: 'content imgUrl senderId',
+                populate: {
+                    path: 'senderId',
+                    select: 'displayName'
+                }
+            });
+
+        messages = messages.filter(m =>
+            !m.deletedBy?.some(id => id.toString() === userId.toString())
+        );
 
         let nextCursor = null;
         if (messages.length > Number(limit)) {
@@ -424,10 +436,10 @@ export const getArchivedConversations = async (req, res) => {
             hiddenBy: userId,
             "deletedBy.userId": { $ne: userId }
         })
-        .sort({ lastMessageAt: -1 })
-        .populate({ path: 'participants.userId', select: 'displayName avatarUrl username' })
-        .populate({ path: 'lastMessage.senderId', select: 'displayName avatarUrl' })
-        .populate({ path: 'seenBy', select: 'displayName avatarUrl' });
+            .sort({ lastMessageAt: -1 })
+            .populate({ path: 'participants.userId', select: 'displayName avatarUrl username' })
+            .populate({ path: 'lastMessage.senderId', select: 'displayName avatarUrl' })
+            .populate({ path: 'seenBy', select: 'displayName avatarUrl' });
 
         const formatted = conversations.map((conv) => {
             const participants = (conv.participants || []).map((p) => ({

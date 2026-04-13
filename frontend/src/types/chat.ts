@@ -51,6 +51,16 @@ export interface Reaction {
     emoji: string;
 }
 
+export interface ReplyTo {
+    _id: string;
+    content?: string | null;
+    imgUrl?: string | null;
+    senderId: {
+        _id: string;
+        displayName: string;
+    } | string;
+}
+
 export interface Message {
     _id: string;
     conversationId: string;
@@ -61,4 +71,6 @@ export interface Message {
     updatedAt?: string | null;
     createdAt: string;
     isOwn?: boolean;
+    replyTo?: ReplyTo | null;
+    deletedForEveryone?: boolean;
 }

@@ -16,6 +16,9 @@ export const useChatStore = create<ChatState>()(
             convloading: false, //conv loading
             messageLoading: false, //message loading
             loading: false, //general loading for actions like creating conversation or sending message
+            replyingTo: null, //message being replied to
+
+            setReplyingTo: (message) => set({ replyingTo: message }),
 
             setActiveConversation: (id) => set({ activeConversationId: id }),
             reset: () => {
@@ -24,7 +27,8 @@ export const useChatStore = create<ChatState>()(
                     messages: {},
                     activeConversationId: null,
                     convloading: false,
-                    messageLoading: false
+                    messageLoading: false,
+                    replyingTo: null
                 });
             },
             fetchConversations: async () => {
@@ -88,10 +92,10 @@ export const useChatStore = create<ChatState>()(
                 }
             },
 
-            sendDirectMessage: async (recipientId, content, imgUrl) => {
+            sendDirectMessage: async (recipientId, content, imgUrl, replyToId) => {
                 try {
                     const { activeConversationId } = get();
-                    await chatService.sendDirectMessage(recipientId, content, imgUrl, activeConversationId || undefined);
+                    await chatService.sendDirectMessage(recipientId, content, imgUrl, activeConversationId || undefined, replyToId);
 
                     set((state) => ({
                         conversations: state.conversations.map((c) =>
@@ -103,9 +107,9 @@ export const useChatStore = create<ChatState>()(
                 }
             },
 
-            sendGroupMessage: async (conversationId, content, imgUrl) => {
+            sendGroupMessage: async (conversationId, content, imgUrl, replyToId) => {
                 try {
-                    await chatService.sendGroupMessage(conversationId, content, imgUrl);
+                    await chatService.sendGroupMessage(conversationId, content, imgUrl, replyToId);
                     set((state) => ({
                         conversations: state.conversations.map((c) =>
                             c._id === get().activeConversationId ? { ...c, seenBy: [] } : c)
@@ -298,7 +302,7 @@ export const useChatStore = create<ChatState>()(
                     return { messages: newMessages };
                 });
             },
-            
+
             removeConversations: (conversationIds: string[]) => {
                 set((state) => ({
                     conversations: state.conversations.filter(c => !conversationIds.includes(c._id)),
@@ -309,6 +313,36 @@ export const useChatStore = create<ChatState>()(
                         Object.entries(state.messages).filter(([key]) => !conversationIds.includes(key))
                     )
                 }));
+            },
+
+            updateMessageContent: (messageId: string, content: null, imgUrl: null) => {
+                set((state) => {
+                    const newMessages = { ...state.messages };
+                    for (const convId in newMessages) {
+                        newMessages[convId] = {
+                            ...newMessages[convId],
+                            items: newMessages[convId].items.map(m =>
+                                m._id === messageId
+                                    ? { ...m, content, imgUrl, deletedForEveryone: true }
+                                    : m
+                            )
+                        };
+                    }
+                    return { messages: newMessages };
+                });
+            },
+
+            deleteMessageLocally: (messageId: string) => {
+                set((state) => {
+                    const newMessages = { ...state.messages };
+                    for (const convId in newMessages) {
+                        newMessages[convId] = {
+                            ...newMessages[convId],
+                            items: newMessages[convId].items.filter(m => m._id !== messageId)
+                        };
+                    }
+                    return { messages: newMessages };
+                });
             },
         }),
 

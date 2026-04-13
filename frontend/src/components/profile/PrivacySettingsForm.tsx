@@ -47,6 +47,16 @@ const PrivacySettingsForm = () => {
 
                 <CardContent className="space-y-6">
                     <div className="space-y-4">
+
+                        <Button
+                            variant="outline"
+                            className="w-full justify-start glass-light border-border/30 hover:text-info"
+                            onClick={() => setOpenActiveSessions(true)}
+                        >
+                            <ShieldCheck className="size-4 mr-2" />
+                            Active Sessions
+                        </Button>
+
                         {isGoogleOnly ? (
                             <div className="flex items-center gap-3 p-3 rounded-lg border border-border/30 glass-light">
                                 <svg width="16" height="16" viewBox="0 0 48 48" className="shrink-0">
@@ -72,15 +82,6 @@ const PrivacySettingsForm = () => {
                                 Change Password
                             </Button>
                         )}
-
-                        <Button
-                            variant="outline"
-                            className="w-full justify-start glass-light border-border/30 hover:text-info"
-                            onClick={() => setOpenActiveSessions(true)}
-                        >
-                            <ShieldCheck className="size-4 mr-2" />
-                            Active Sessions
-                        </Button>
 
                         <Button
                             variant="outline"

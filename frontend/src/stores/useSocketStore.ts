@@ -185,6 +185,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         socket.on('message-reaction', ({ messageId, reactions }) => {
             useChatStore.getState().updateMessageReactions(messageId, reactions);
         });
+
+        socket.on('message-deleted', ({ messageId, conversationId, deletedForEveryone }) => {
+            if (deletedForEveryone) {
+                useChatStore.getState().updateMessageContent(messageId, null, null);
+            }
+        });
     },
 
     disconnectSocket: () => {

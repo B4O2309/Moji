@@ -31,10 +31,23 @@ const messageSchema = new mongoose.Schema({
     imgUrl: {
         type: String,
     },
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null
+    },
     reactions: {
         type: [reactionSchema],
         default: []
-    }
+    },
+    deletedForEveryone: {
+        type: Boolean,
+        default: false
+    },
+    deletedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }]
 },
     {
         timestamps: true
