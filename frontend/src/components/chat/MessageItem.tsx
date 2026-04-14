@@ -1,4 +1,4 @@
-import type { Conversation, Message, Participant } from "@/types/chat";
+import type { Conversation, Message, Participant, SeenUser } from "@/types/chat";
 import UserAvatar from "./UserAvatar";
 import { cn, formatMessageTime } from "@/lib/utils";
 import { Card } from "../ui/card";
@@ -21,6 +21,7 @@ interface MessageItemProps {
     selectedConv: Conversation;
     lastMessageStatus: "delivered" | "seen";
     searchQuery?: string;
+    onScrollToReply?: (replyMessageId: string) => void;
 }
 
 // Highlights matched search query text inside a message
@@ -47,7 +48,7 @@ const HighlightText = ({ text, query }: { text: string; query?: string }) => {
     );
 };
 
-const MessageItem = ({ message, index, messages, selectedConv, lastMessageStatus, searchQuery }: MessageItemProps) => {
+const MessageItem = ({ message, index, messages, selectedConv, lastMessageStatus, searchQuery, onScrollToReply }: MessageItemProps) => {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
@@ -258,12 +259,20 @@ const MessageItem = ({ message, index, messages, selectedConv, lastMessageStatus
                                     )}>
                                         {/* Quoted reply preview */}
                                         {message.replyTo && (
-                                            <div className={cn(
-                                                "mb-2 p-2 text-xs rounded-lg border-l-2 cursor-pointer",
-                                                message.isOwn
-                                                    ? "bg-black/10 border-white/60 text-white/80 hover:bg-black/20"
-                                                    : "bg-black/5 dark:bg-white/5 border-primary text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10"
-                                            )}>
+                                            <div
+                                                className={cn(
+                                                    "mb-2 p-2 text-xs rounded-lg border-l-2 cursor-pointer",
+                                                    message.isOwn
+                                                        ? "bg-black/10 border-white/60 text-white/80 hover:bg-black/20"
+                                                        : "bg-black/5 dark:bg-white/5 border-primary text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10"
+                                                )}
+                                                onClick={() => {
+                                                    const replyId = typeof message.replyTo === 'object' && message.replyTo !== null
+                                                        ? message.replyTo._id
+                                                        : null;
+                                                    if (replyId) onScrollToReply?.(replyId);
+                                                }}
+                                            >
                                                 <p className={cn(
                                                     "font-semibold mb-0.5 text-[11px]",
                                                     message.isOwn ? "text-white" : "text-primary"
@@ -355,20 +364,63 @@ const MessageItem = ({ message, index, messages, selectedConv, lastMessageStatus
                         </div>
                     )}
 
-                    {/* Seen or delivered status for last own message */}
-                    {message.isOwn && message._id === selectedConv.lastMessage?._id && (
-                        <Badge
-                            variant="outline"
-                            className={cn(
-                                "text-xs px-1.5 py-0.5 h-4 border-0 mt-1",
-                                lastMessageStatus === "seen"
-                                    ? "bg-primary/20 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                            )}
-                        >
-                            {lastMessageStatus}
-                        </Badge>
-                    )}
+                    {/* Seen / delivered status for last own message */}
+                    {message.isOwn && message._id === selectedConv.lastMessage?._id && (() => {
+                        const isGroup = selectedConv.type === "group";
+                        const currentUserId = useAuthStore.getState().user?._id;
+                        const seenBy = selectedConv.seenBy ?? [];
+
+                        if (isGroup) {
+                            // In group: show who else has seen (exclude sender)
+                            const viewers = seenBy.filter((s) => {
+                                const id = typeof s === "string" ? s : (s as SeenUser)._id;
+                                return id !== currentUserId;
+                            });
+
+                            if (viewers.length === 0) {
+                                return (
+                                    <Badge
+                                        variant="outline"
+                                        className="text-xs px-1.5 py-0.5 h-4 border-0 mt-1 bg-muted text-muted-foreground"
+                                    >
+                                        delivered
+                                    </Badge>
+                                );
+                            }
+
+                            const MAX_SHOW = 3;
+                            const displayed = viewers.slice(0, MAX_SHOW);
+                            const overflow = viewers.length - MAX_SHOW;
+
+                            const names = displayed.map((s) =>
+                                typeof s === "string" ? s : (s as SeenUser).displayName ?? "?"
+                            );
+                            const label = overflow > 0
+                                ? `Seen by ${names.join(", ")}...`
+                                : `Seen by ${names.join(", ")}`;
+
+                            return (
+                                <span className="text-[10px] text-muted-foreground mt-1 max-w-[200px] truncate">
+                                    {label}
+                                </span>
+                            );
+                        }
+
+                        // Direct chat: simple seen/delivered badge
+                        return (
+                            <Badge
+                                variant="outline"
+                                className={cn(
+                                    "text-xs px-1.5 py-0.5 h-4 border-0 mt-1",
+                                    lastMessageStatus === "seen"
+                                        ? "bg-primary/20 text-primary"
+                                        : "bg-muted text-muted-foreground"
+                                )}
+                            >
+                                {lastMessageStatus}
+                            </Badge>
+                        );
+                    })()}
                 </div>
             </div>
 

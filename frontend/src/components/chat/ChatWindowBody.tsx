@@ -1,7 +1,7 @@
 import { useChatStore } from "@/stores/useChatStore.ts";
 import ChatWelcomeScreen from "./ChatWelcomeScreen";
 import MessageItem from "./MessageItem";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,8 @@ interface ChatWindowBodyProps {
 const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" }: ChatWindowBodyProps) => {
     const { activeConversationId, conversations, messages: allMessages, fetchMessages } = useChatStore();
     const [lastMessageStatus, setLastMessageStatus] = useState<"delivered" | "seen">("delivered");
+    const [highlightedReplyId, setHighlightedReplyId] = useState<string | null>(null);
+
     const hasMore = allMessages[activeConversationId!]?.hasMore ?? false;
     const messages = allMessages[activeConversationId!]?.items ?? [];
     const reverseMessages = [...messages].reverse();
@@ -23,6 +25,7 @@ const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement>>({});
+    const pendingScrollId = useRef<string | null>(null);
 
     useEffect(() => {
         const lastMessage = selectedConv?.lastMessage;
@@ -52,12 +55,54 @@ const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" 
         if (searchResults.length === 0) return;
         const targetId = searchResults[searchIndex];
         if (!targetId) return;
-
         const el = messageRefs.current[targetId];
         if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
     }, [searchResults, searchIndex]);
+
+    // Sau mỗi lần messages thay đổi: kiểm tra nếu tin nhắn đang chờ đã được load
+    useEffect(() => {
+        const targetId = pendingScrollId.current;
+        if (!targetId) return;
+        const el = messageRefs.current[targetId];
+        if (el) {
+            pendingScrollId.current = null;
+            scrollAndHighlight(targetId);
+        }
+    }, [messages.length]);
+
+    const scrollAndHighlight = useCallback((messageId: string) => {
+        const el = messageRefs.current[messageId];
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedReplyId(messageId);
+        setTimeout(() => setHighlightedReplyId(null), 1500);
+    }, []);
+
+    const handleScrollToReply = useCallback(async (replyMessageId: string) => {
+        // Tin nhắn đã có trong DOM -> scroll thẳng
+        if (messageRefs.current[replyMessageId]) {
+            scrollAndHighlight(replyMessageId);
+            return;
+        }
+
+        // Chưa load -> fetch lịch sử cho đến khi tìm thấy
+        pendingScrollId.current = replyMessageId;
+        const convId = activeConversationId;
+        if (!convId) return;
+
+        for (let i = 0; i < 10; i++) {
+            const state = useChatStore.getState();
+            const currentHasMore = state.messages[convId]?.hasMore ?? false;
+            if (!currentHasMore) break;
+
+            await fetchMessages(convId);
+
+            const items = useChatStore.getState().messages[convId]?.items ?? [];
+            if (items.some(m => m._id === replyMessageId)) break;
+        }
+    }, [activeConversationId, fetchMessages, scrollAndHighlight]);
 
     const fetchMoreMessages = async () => {
         if (!activeConversationId) return;
@@ -115,6 +160,7 @@ const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" 
                     {reverseMessages.map((message, index) => {
                         const isHighlighted = searchResults.includes(message._id);
                         const isActive = searchResults[searchIndex] === message._id;
+                        const isReplyHighlighted = highlightedReplyId === message._id;
 
                         return (
                             <div
@@ -123,7 +169,8 @@ const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" 
                                 className={cn(
                                     "rounded-lg transition-all duration-300",
                                     isActive && "bg-primary/10 ring-1 ring-primary/30",
-                                    isHighlighted && !isActive && "bg-muted/50"
+                                    isHighlighted && !isActive && "bg-muted/50",
+                                    isReplyHighlighted && "bg-primary/15 ring-2 ring-primary/40"
                                 )}
                             >
                                 <MessageItem
@@ -133,6 +180,7 @@ const ChatWindowBody = ({ searchResults = [], searchIndex = 0, searchQuery = "" 
                                     selectedConv={selectedConv}
                                     lastMessageStatus={lastMessageStatus}
                                     searchQuery={searchQuery}
+                                    onScrollToReply={handleScrollToReply}
                                 />
                             </div>
                         );

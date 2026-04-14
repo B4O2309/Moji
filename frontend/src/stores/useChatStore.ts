@@ -179,7 +179,13 @@ export const useChatStore = create<ChatState>()(
 
                     if (!conv) return;
 
-                    if ((conv.unreadCounts?.[user._id] ?? 0) === 0) return;
+                    // Skip only if already seen (in seenBy list) AND no unread messages
+                    const alreadySeen = (conv.seenBy ?? []).some((s) => {
+                        const id = typeof s === 'string' ? s : (s as any)._id;
+                        return id === user._id;
+                    });
+                    const hasUnread = (conv.unreadCounts?.[user._id] ?? 0) > 0;
+                    if (alreadySeen && !hasUnread) return;
 
                     await chatService.markAsSeen(activeConversationId);
 

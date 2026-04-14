@@ -198,7 +198,7 @@ export const markAsSeen = async (req, res) => {
             conversationId,
             { $addToSet: { seenBy: userId }, $set: { [`unreadCount.${userId}`]: 0 } },
             { new: true }
-        );
+        ).populate({ path: 'seenBy', select: 'displayName avatarUrl' });
 
         const unreadCounts = Object.fromEntries(updated.unreadCount);
 
