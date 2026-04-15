@@ -22,18 +22,9 @@ const ChatWindowLayout = () => {
     }, [activeConversationId]);
 
     useEffect(() => {
-        if (!selectedConv) return;
-
-        const markSeen = async () => {
-            try {
-                await markAsSeen();
-            }
-            catch (error) {
-                console.error("Error marking messages as seen:", error);
-            }
-        }
-        markSeen();
-    }, [markAsSeen, selectedConv]);
+        if (!activeConversationId) return;
+        useChatStore.getState().markAsSeen();
+    }, [activeConversationId]);
 
     if (!selectedConv) {
         return <ChatWelcomeSreen />;

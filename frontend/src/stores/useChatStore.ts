@@ -13,14 +13,14 @@ export const useChatStore = create<ChatState>()(
             conversations: [],
             messages: {},
             activeConversationId: null,
-            convloading: false, //conv loading
-            messageLoading: false, //message loading
-            loading: false, //general loading for actions like creating conversation or sending message
-            replyingTo: null, //message being replied to
+            convloading: false,
+            messageLoading: false,
+            loading: false,
+            replyingTo: null,
 
             setReplyingTo: (message) => set({ replyingTo: message }),
-
             setActiveConversation: (id) => set({ activeConversationId: id }),
+
             reset: () => {
                 set({
                     conversations: [],
@@ -31,6 +31,7 @@ export const useChatStore = create<ChatState>()(
                     replyingTo: null
                 });
             },
+
             fetchConversations: async () => {
                 try {
                     set({ convloading: true });
@@ -48,14 +49,12 @@ export const useChatStore = create<ChatState>()(
                 const { user } = useAuthStore.getState();
 
                 const convId = conversationId ?? activeConversationId;
-
                 if (!convId) return;
 
                 const current = messages?.[convId];
                 const nextCursor = current?.nextCursor === undefined ? "" : current?.nextCursor;
 
                 if (nextCursor === null) return;
-
 
                 set({ messageLoading: true });
 
@@ -101,7 +100,6 @@ export const useChatStore = create<ChatState>()(
                         conversations: state.conversations.map((c) =>
                             c._id === activeConversationId ? { ...c, seenBy: [] } : c)
                     }));
-
                 } catch (error) {
                     console.error("Failed to send direct message", error);
                 }
@@ -136,10 +134,7 @@ export const useChatStore = create<ChatState>()(
 
                     set((state) => {
                         const prevItems = state.messages[convId]?.items ?? [];
-
-                        if (prevItems.some(m => m._id === message._id)) {
-                            return state; // no duplicates
-                        }
+                        if (prevItems.some(m => m._id === message._id)) return state;
 
                         return {
                             messages: {
@@ -161,9 +156,7 @@ export const useChatStore = create<ChatState>()(
             updateConversation: (conversation) => {
                 set((state) => ({
                     conversations: state.conversations.map((c) =>
-                        c._id === conversation._id
-                            ? { ...c, ...conversation }
-                            : c
+                        c._id === conversation._id ? { ...c, ...conversation } : c
                     )
                 }));
             },
@@ -184,22 +177,44 @@ export const useChatStore = create<ChatState>()(
                         const id = typeof s === 'string' ? s : (s as any)._id;
                         return id === user._id;
                     });
+
                     const hasUnread = (conv.unreadCounts?.[user._id] ?? 0) > 0;
+
                     if (alreadySeen && !hasUnread) return;
 
                     await chatService.markAsSeen(activeConversationId);
 
+                    // --- BẮT ĐẦU ĐOẠN SỬA ---
+                    // Tạo một object SeenUser chuẩn từ thông tin user hiện tại
+                    const currentSeenUser = {
+                        _id: user._id,
+                        displayName: user.displayName,
+                        avatarUrl: user.avatarUrl
+                    };
+
                     set((state) => ({
-                        conversations: state.conversations.map((c) =>
-                            c._id === activeConversationId && c.lastMessage ? {
-                                ...c,
-                                unreadCounts: {
-                                    ...c.unreadCounts,
-                                    [user._id]: 0
-                                }
+                        conversations: state.conversations.map((c) => {
+                            if (c._id === activeConversationId && c.lastMessage) {
+                                // Kiểm tra lại lần nữa cho chắc ăn xem user đã có trong mảng chưa
+                                const isUserInSeenBy = (c.seenBy || []).some(
+                                    s => (typeof s === 'string' ? s : s._id) === user._id
+                                );
+
+                                return {
+                                    ...c,
+                                    // Nếu chưa có thì mới copy mảng cũ và nhét object mới vào
+                                    seenBy: isUserInSeenBy ? c.seenBy : [...(c.seenBy || []), currentSeenUser],
+                                    unreadCounts: {
+                                        ...c.unreadCounts,
+                                        [user._id]: 0
+                                    }
+                                };
                             }
-                                : c)
+                            return c;
+                        })
                     }));
+                    // --- KẾT THÚC ĐOẠN SỬA ---
+
                 }
                 catch (error) {
                     console.error("Failed to mark as seen", error);
@@ -235,12 +250,9 @@ export const useChatStore = create<ChatState>()(
             hideConversation: async (conversationId: string) => {
                 try {
                     await api.put(`/conversations/${conversationId}/hide`, {}, { withCredentials: true });
-                    // Delete locally to reflect immediately
                     set((state) => ({
                         conversations: state.conversations.filter((c) => c._id !== conversationId),
-                        activeConversationId: state.activeConversationId === conversationId
-                            ? null
-                            : state.activeConversationId
+                        activeConversationId: state.activeConversationId === conversationId ? null : state.activeConversationId
                     }));
                 } catch (error) {
                     console.error(error);
@@ -253,9 +265,7 @@ export const useChatStore = create<ChatState>()(
                     await api.delete(`/conversations/${conversationId}/delete`, { withCredentials: true });
                     set((state) => ({
                         conversations: state.conversations.filter((c) => c._id !== conversationId),
-                        activeConversationId: state.activeConversationId === conversationId
-                            ? null
-                            : state.activeConversationId,
+                        activeConversationId: state.activeConversationId === conversationId ? null : state.activeConversationId,
                         messages: Object.fromEntries(
                             Object.entries(state.messages).filter(([key]) => key !== conversationId)
                         )
@@ -268,7 +278,7 @@ export const useChatStore = create<ChatState>()(
 
             renameGroup: async (conversationId: string, name: string) => {
                 try {
-                    const res = await api.patch(`/conversations/${conversationId}/rename`, { name }, { withCredentials: true });
+                    await api.patch(`/conversations/${conversationId}/rename`, { name }, { withCredentials: true });
                 } catch (error) {
                     console.error(error);
                     toast.error('Failed to rename group.');
@@ -280,9 +290,7 @@ export const useChatStore = create<ChatState>()(
                     await api.delete(`/conversations/${conversationId}/leave`, { withCredentials: true });
                     set((state) => ({
                         conversations: state.conversations.filter((c) => c._id !== conversationId),
-                        activeConversationId: state.activeConversationId === conversationId
-                            ? null
-                            : state.activeConversationId,
+                        activeConversationId: state.activeConversationId === conversationId ? null : state.activeConversationId,
                         messages: Object.fromEntries(
                             Object.entries(state.messages).filter(([key]) => key !== conversationId)
                         )
@@ -312,9 +320,7 @@ export const useChatStore = create<ChatState>()(
             removeConversations: (conversationIds: string[]) => {
                 set((state) => ({
                     conversations: state.conversations.filter(c => !conversationIds.includes(c._id)),
-                    activeConversationId: conversationIds.includes(state.activeConversationId ?? '')
-                        ? null
-                        : state.activeConversationId,
+                    activeConversationId: conversationIds.includes(state.activeConversationId ?? '') ? null : state.activeConversationId,
                     messages: Object.fromEntries(
                         Object.entries(state.messages).filter(([key]) => !conversationIds.includes(key))
                     )
@@ -328,9 +334,7 @@ export const useChatStore = create<ChatState>()(
                         newMessages[convId] = {
                             ...newMessages[convId],
                             items: newMessages[convId].items.map(m =>
-                                m._id === messageId
-                                    ? { ...m, content, imgUrl, deletedForEveryone: true }
-                                    : m
+                                m._id === messageId ? { ...m, content, imgUrl, deletedForEveryone: true } : m
                             )
                         };
                     }
@@ -350,6 +354,28 @@ export const useChatStore = create<ChatState>()(
                     return { messages: newMessages };
                 });
             },
+
+            editMessage: async (messageId: string, content: string) => {
+                try {
+                    const res = await api.patch(`/messages/${messageId}`, { content });
+                    const updatedMessage = res.data;
+
+                    set((state) => {
+                        const newMessages = { ...state.messages };
+                        for (const convId in newMessages) {
+                            newMessages[convId] = {
+                                ...newMessages[convId],
+                                items: newMessages[convId].items.map((m) =>
+                                    m._id === messageId ? { ...m, content: updatedMessage.content, isEdited: true } : m
+                                )
+                            };
+                        }
+                        return { messages: newMessages };
+                    });
+                } catch (error) {
+                    toast.error("Failed to edit message");
+                }
+            }
         }),
 
         {
@@ -358,9 +384,7 @@ export const useChatStore = create<ChatState>()(
             merge: (persistedState: any, currentState) => ({
                 ...currentState,
                 ...persistedState,
-                conversations: Array.isArray(persistedState?.conversations)
-                    ? persistedState.conversations
-                    : [],
+                conversations: Array.isArray(persistedState?.conversations) ? persistedState.conversations : [],
             }),
         }
     )
